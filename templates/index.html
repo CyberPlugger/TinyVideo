@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>TinyVideo</title>
+
+    <style>
+
+        body {
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .box {
+            background: #1d1d1d;
+            padding: 25px;
+            border-radius: 15px;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 15px;
+            background: #292929;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 20px;
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .generate {
+            background: #5865f2;
+            color: white;
+            width: 100%;
+        }
+
+        .feedback {
+            display: flex;
+            gap: 10px;
+        }
+
+        .good {
+            background: #22c55e;
+        }
+
+        .bad {
+            background: #ef4444;
+            color: white;
+        }
+
+        video {
+            width: 100%;
+            margin-top: 25px;
+            border-radius: 10px;
+            background: black;
+        }
+
+        .hint {
+            color: #999;
+            font-size: 14px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <h1>🎬 TinyVideo</h1>
+
+    <div class="box">
+
+        <form action="/generate" method="post">
+
+            <p>Prompt:</p>
+
+            <input
+                type="text"
+                name="prompt"
+                placeholder="red ball moving right"
+                required
+            >
+
+            <button
+                class="generate"
+                type="submit"
+            >
+                Generate
+            </button>
+
+        </form>
+
+
+        <video
+            controls
+            src="/video"
+        ></video>
+
+
+        <p class="hint">
+            Generated video appears above.
+        </p>
+
+
+        <hr>
+
+
+        <p>
+            Was the generation useful?
+        </p>
+
+
+        <div class="feedback">
+
+            <form
+                action="/feedback"
+                method="post"
+            >
+
+                <input
+                    type="hidden"
+                    name="prompt"
+                    value="red ball moving right"
+                >
+
+                <input
+                    type="hidden"
+                    name="rating"
+                    value="good"
+                >
+
+                <button
+                    class="good"
+                    type="submit"
+                >
+                    👍 Good
+                </button>
+
+            </form>
+
+
+            <form
+                action="/feedback"
+                method="post"
+            >
+
+                <input
+                    type="hidden"
+                    name="prompt"
+                    value="red ball moving right"
+                >
+
+                <input
+                    type="hidden"
+                    name="rating"
+                    value="bad"
+                >
+
+                <button
+                    class="bad"
+                    type="submit"
+                >
+                    👎 Bad
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
