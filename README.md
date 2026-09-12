@@ -1,4 +1,4 @@
-# TinyVideo
+# TinyVideo v1.4 (BIGGEST update so far)
 
 > A small, local-first AI video generation system built from the ground up in Python.
 
