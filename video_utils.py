@@ -2,17 +2,151 @@ import os
 
 import imageio.v2 as imageio
 import numpy as np
+import torch
+
+
+def _to_numpy_video(video):
+    """
+    Convert a TinyVideo tensor into:
+
+        [T, H, W, C]
+
+    with uint8 RGB frames.
+    """
+
+    if isinstance(video, torch.Tensor):
+        video = video.detach().cpu()
+
+    if isinstance(video, np.ndarray):
+        array = video
+    else:
+        array = np.asarray(video)
+
+    if array.ndim == 5:
+        # Accept:
+        #
+        # [B, C, T, H, W]
+        #
+        # or
+        #
+        # [B, T, C, H, W]
+        #
+        # Only one video is supported here.
+        if array.shape[0] != 1:
+            raise ValueError(
+                f"Expected batch size 1, got {array.shape}."
+            )
+
+        array = array[0]
+
+    if array.ndim != 4:
+        raise ValueError(
+            "Video must be a 4D or 5D tensor/array. "
+            f"Got shape {array.shape}."
+        )
+
+    # --------------------------------------------------------
+    # Detect channel position.
+    # --------------------------------------------------------
+
+    if array.shape[0] in (1, 3, 4):
+        # [C, T, H, W]
+        array = np.transpose(
+            array,
+            (1, 2, 3, 0),
+        )
+
+    elif array.shape[1] in (1, 3, 4):
+        # [T, C, H, W]
+        array = np.transpose(
+            array,
+            (0, 2, 3, 1),
+        )
+
+    elif array.shape[-1] in (1, 3, 4):
+        # Already [T, H, W, C]
+        pass
+
+    else:
+        raise ValueError(
+            "Could not determine RGB channel dimension "
+            f"from video shape {array.shape}."
+        )
+
+    # --------------------------------------------------------
+    # Convert floating point ranges.
+    # --------------------------------------------------------
+
+    array = array.astype(np.float32)
+
+    if array.min() < 0.0:
+        # [-1, 1] -> [0, 1]
+        array = (array + 1.0) / 2.0
+
+    array = np.clip(
+        array,
+        0.0,
+        1.0,
+    )
+
+    # --------------------------------------------------------
+    # Ensure exactly RGB.
+    # --------------------------------------------------------
+
+    if array.shape[-1] == 1:
+        array = np.repeat(
+            array,
+            3,
+            axis=-1,
+        )
+
+    elif array.shape[-1] == 4:
+        # Drop alpha for ffmpeg RGB output.
+        array = array[..., :3]
+
+    elif array.shape[-1] != 3:
+        raise ValueError(
+            f"Expected 1, 3, or 4 channels. "
+            f"Got {array.shape[-1]}."
+        )
+
+    # --------------------------------------------------------
+    # [0,1] -> uint8
+    # --------------------------------------------------------
+
+    array = (
+        array * 255.0
+    ).round().astype(np.uint8)
+
+    return array
 
 
 def save_video(
     video,
     path,
-    fps=5
+    fps=5,
 ):
+    """
+    Save a TinyVideo tensor as an MP4.
 
-    # --------------------------------------------------------
-    # Создаём папку
-    # --------------------------------------------------------
+    Accepted formats include:
+
+        [T, C, H, W]
+        [C, T, H, W]
+        [1, C, T, H, W]
+        [1, T, C, H, W]
+
+    Output format:
+
+        MP4 / RGB
+    """
+
+    if path is None:
+        raise ValueError(
+            "Output path cannot be None."
+        )
+
+    path = os.fspath(path)
 
     directory = os.path.dirname(
         os.path.abspath(path)
@@ -20,87 +154,27 @@ def save_video(
 
     os.makedirs(
         directory,
-        exist_ok=True
+        exist_ok=True,
     )
 
-    # --------------------------------------------------------
-    # Tensor → NumPy
-    # --------------------------------------------------------
+    frames = _to_numpy_video(video)
 
-    video = video.detach().cpu()
-
-    # Наша модель:
-    #
-    # [frames, channels, height, width]
-    #
-    # Например:
-    #
-    # [8, 3, 64, 64]
-
-    # Перемещаем каналы:
-    #
-    # [frames, channels, height, width]
-    #
-    # →
-    #
-    # [frames, height, width, channels]
-
-    video = video.permute(
-        0,
-        2,
-        3,
-        1
-    )
-
-    video = video.numpy()
-
-    # --------------------------------------------------------
-    # 0..1 → 0..255
-    # --------------------------------------------------------
-
-    video = np.clip(
-        video,
-        0.0,
-        1.0
-    )
-
-    video = (
-        video * 255
-    ).astype(
-        np.uint8
-    )
-
-    # --------------------------------------------------------
-    # Сохраняем MP4
-    # --------------------------------------------------------
-
-    print(
-        f"Saving {len(video)} frames..."
-    )
+    if frames.shape[0] == 0:
+        raise ValueError(
+            "Cannot save a video with zero frames."
+        )
 
     writer = imageio.get_writer(
         path,
         fps=fps,
         codec="libx264",
-        format="FFMPEG"
+        format="FFMPEG",
     )
 
     try:
-
-        for frame in video:
-
-            writer.append_data(
-                frame
-            )
-
+        for frame in frames:
+            writer.append_data(frame)
     finally:
-
         writer.close()
 
-    print(
-        "Video saved:"
-    )
-
-    print(
-        os.path.abspath(path)
-    )
+    return path

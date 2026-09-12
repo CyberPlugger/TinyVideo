@@ -1,215 +1,203 @@
 import os
 import random
 
+import numpy as np
 import torch
+import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
+from constants import *
 
-# ============================================================
-# Пути всегда относительно этого файла
-# ============================================================
+OUTPUT_PATH = DATASET_FOLDER_PATH
 
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
+def make_frame(
+    color,
+    x,
+    y,
+    radius=8,
+):
+    image = Image.new(
+        "RGB",
+        (WIDTH, HEIGHT),
+        (15, 15, 15),
+    )
 
-DATASET_DIR = os.path.join(
-    BASE_DIR,
-    "dataset"
-)
+    draw = ImageDraw.Draw(image)
 
-DATASET_PATH = os.path.join(
-    DATASET_DIR,
-    "tiny_dataset.pt"
-)
+    draw.ellipse(
+        (
+            x - radius,
+            y - radius,
+            x + radius,
+            y + radius,
+        ),
+        fill=color,
+    )
 
-
-# ============================================================
-# Настройки
-# ============================================================
-
-WIDTH = 64
-HEIGHT = 64
-FRAMES = 8
-
-
-COLORS = {
-    "red": (255, 40, 40),
-    "blue": (40, 80, 255),
-    "green": (40, 255, 80),
-    "yellow": (255, 230, 40)
-}
+    return image
 
 
-DIRECTIONS = {
-    "left": (-1, 0),
-    "right": (1, 0),
-    "up": (0, -1),
-    "down": (0, 1)
-}
-
-
-# ============================================================
-# Создание одного видео
-# ============================================================
-
-def create_video(color_name, direction_name):
+def create_video(
+    color_name,
+    direction_name,
+    seed,
+):
+    random.seed(seed)
 
     color = COLORS[color_name]
 
     dx, dy = DIRECTIONS[direction_name]
 
-    x = random.randint(
-        10,
-        WIDTH - 22
-    )
+    radius = random.randint(5, 9)
 
-    y = random.randint(
-        10,
-        HEIGHT - 22
-    )
+    # Start the object somewhere that gives it room to move.
+    if dx > 0:
+        start_x = random.randint(10, 25)
+        start_y = random.randint(15, HEIGHT - 15)
+
+    elif dx < 0:
+        start_x = random.randint(WIDTH - 25, WIDTH - 10)
+        start_y = random.randint(15, HEIGHT - 15)
+
+    elif dy > 0:
+        start_x = random.randint(15, WIDTH - 15)
+        start_y = random.randint(10, 25)
+
+    else:
+        start_x = random.randint(15, WIDTH - 15)
+        start_y = random.randint(HEIGHT - 25, HEIGHT - 10)
+
+    speed = random.randint(3, 6)
 
     frames = []
 
-    for _ in range(FRAMES):
+    for frame_index in range(FRAMES):
+        x = start_x + dx * speed * frame_index
+        y = start_y + dy * speed * frame_index
 
-        image = Image.new(
-            "RGB",
-            (WIDTH, HEIGHT),
-            (10, 10, 10)
+        x = max(radius, min(WIDTH - radius, x))
+        y = max(radius, min(HEIGHT - radius, y))
+
+        frame = make_frame(
+            color,
+            x,
+            y,
+            radius,
         )
 
-        draw = ImageDraw.Draw(image)
+        array = np.asarray(frame).astype(
+            np.float32
+        ) / 255.0
 
-        draw.ellipse(
-            (
-                x,
-                y,
-                x + 12,
-                y + 12
-            ),
-            fill=color
-        )
+        tensor = torch.from_numpy(array)
+        tensor = tensor.permute(2, 0, 1)
 
-        # PIL → Tensor
-        frame = torch.tensor(
-            list(image.getdata()),
-            dtype=torch.float32
-        )
-
-        frame = frame.reshape(
-            HEIGHT,
-            WIDTH,
-            3
-        )
-
-        # HWC → CHW
-        frame = frame.permute(
-            2,
-            0,
-            1
-        )
-
-        frame /= 255.0
-
-        frames.append(frame)
-
-        x += dx * 5
-        y += dy * 5
+        frames.append(tensor)
 
     return torch.stack(frames)
 
 
-# ============================================================
-# Создание датасета
-# ============================================================
+def create_resolution_variant(
+    video,
+    resolution,
+):
+    """
+    Simulate a resolution-specific training path.
 
-def main():
+    The final model input remains 64x64, but the image is first
+    resized through the selected resolution before returning to
+    the training resolution.
+    """
 
-    print()
-    print("=" * 50)
-    print("        TinyVideo Dataset Generator")
-    print("=" * 50)
+    width, height = RESOLUTION_VARIANTS[resolution]
 
-    print()
-    print("TinyVideo directory:")
-    print(BASE_DIR)
-
-    print()
-    print("Dataset directory:")
-    print(DATASET_DIR)
-
-    print()
-
-    os.makedirs(
-        DATASET_DIR,
-        exist_ok=True
+    video = F.interpolate(
+        video,
+        size=(height, width),
+        mode="bilinear",
+        align_corners=False,
     )
 
-    samples = []
-
-    total = (
-        len(COLORS)
-        * len(DIRECTIONS)
-        * 100
+    video = F.interpolate(
+        video,
+        size=(HEIGHT, WIDTH),
+        mode="bilinear",
+        align_corners=False,
     )
 
-    counter = 0
+    return video
 
-    for color in COLORS:
 
-        for direction in DIRECTIONS:
+def generate_dataset(
+    samples_per_combination=100,
+    output_path=OUTPUT_PATH,
+):
+    dataset = []
 
-            for _ in range(100):
+    seed = 0
+
+    for color_name in COLORS:
+        for direction_name in DIRECTIONS:
+
+            print(
+                f"Generating {color_name} object moving "
+                f"{direction_name}..."
+            )
+
+            for _ in range(samples_per_combination):
 
                 video = create_video(
-                    color,
-                    direction
+                    color_name,
+                    direction_name,
+                    seed,
                 )
 
-                prompt = (
-                    f"{color} ball moving "
-                    f"{direction}"
+                seed += 1
+
+                base_prompt = (
+                    f"a {color_name} ball moving "
+                    f"{direction_name}"
                 )
 
-                samples.append(
-                    (
-                        prompt,
-                        video
-                    )
-                )
+                # Create all three resolution-conditioned samples.
+                for resolution in RESOLUTION_VARIANTS:
 
-                counter += 1
-
-                if counter % 100 == 0:
-
-                    print(
-                        f"Generated "
-                        f"{counter}/{total}"
+                    variant = create_resolution_variant(
+                        video,
+                        resolution,
                     )
 
-    print()
-    print("Saving dataset...")
+                    prompt = (
+                        f"{base_prompt}, "
+                        f"resolution {resolution}"
+                    )
+
+                    dataset.append(
+                        (
+                            prompt,
+                            variant,
+                        )
+                    )
+
+    os.makedirs(
+        os.path.dirname(
+            os.path.abspath(output_path)
+        ),
+        exist_ok=True,
+    )
 
     torch.save(
-        samples,
-        DATASET_PATH
+        dataset,
+        output_path,
     )
 
     print()
-    print("=" * 50)
-    print("DATASET CREATED!")
-    print("=" * 50)
-
-    print()
-    print("Samples:", len(samples))
-
-    print()
-    print("File:")
-    print(DATASET_PATH)
-
-    print()
+    print("================================")
+    print("TinyVideo synthetic dataset ready")
+    print("================================")
+    print(f"Samples: {len(dataset)}")
+    print(f"Saved to: {output_path}")
 
 
 if __name__ == "__main__":
-    main()
+    generate_dataset()
