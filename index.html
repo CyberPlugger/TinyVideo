@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>TinyVideo — Local AI Video Generation</title>
+
+    <meta
+        name="description"
+        content="TinyVideo is a local-first AI video generation system built from the ground up in Python."
+    >
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: #050505;
+            color: #eeeeee;
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        /* =========================
+           NAVIGATION
+        ========================= */
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 7%;
+
+            background: rgba(5, 5, 5, 0.82);
+            backdrop-filter: blur(14px);
+
+            border-bottom: 1px solid #1b1b1b;
+
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .logo span {
+            color: #63ff8a;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #aaa;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #63ff8a;
+        }
+
+        .nav-download {
+            padding: 9px 16px;
+            border: 1px solid #63ff8a;
+            border-radius: 7px;
+            color: #63ff8a !important;
+        }
+
+        .nav-download:hover {
+            background: #63ff8a;
+            color: #000 !important;
+        }
+
+        /* =========================
+           HERO
+        ========================= */
+
+        .hero {
+            min-height: 100vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            text-align: center;
+
+            padding: 120px 20px 80px;
+
+            position: relative;
+        }
+
+        .hero::before {
+            content: "";
+
+            position: absolute;
+
+            width: 700px;
+            height: 700px;
+
+            background: radial-gradient(
+                circle,
+                rgba(99, 255, 138, 0.12),
+                transparent 65%
+            );
+
+            top: 50%;
+            left: 50%;
+
+            transform: translate(-50%, -50%);
+
+            pointer-events: none;
+        }
+
+        .hero-content {
+            max-width: 900px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .version {
+            display: inline-block;
+
+            border: 1px solid #245c35;
+            background: rgba(40, 100, 55, 0.12);
+
+            color: #63ff8a;
+
+            padding: 6px 13px;
+
+            border-radius: 20px;
+
+            font-size: 13px;
+
+            margin-bottom: 25px;
+        }
+
+        .hero h1 {
+            font-size: clamp(60px, 11vw, 140px);
+            line-height: 0.9;
+            letter-spacing: -7px;
+
+            margin-bottom: 30px;
+        }
+
+        .hero h1 span {
+            color: #63ff8a;
+        }
+
+        .hero p {
+            max-width: 680px;
+
+            margin: 0 auto 35px;
+
+            color: #999;
+
+            font-size: 19px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+
+            flex-wrap: wrap;
+        }
+
+        .button {
+            padding: 13px 24px;
+
+            border-radius: 8px;
+
+            font-weight: 700;
+
+            transition: 0.2s;
+        }
+
+        .primary {
+            background: #63ff8a;
+            color: #000;
+        }
+
+        .primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 35px rgba(99, 255, 138, 0.18);
+        }
+
+        .secondary {
+            border: 1px solid #333;
+            color: #ddd;
+        }
+
+        .secondary:hover {
+            border-color: #63ff8a;
+            color: #63ff8a;
+        }
+
+        /* =========================
+           GENERAL SECTIONS
+        ========================= */
+
+        section {
+            padding: 110px 7%;
+        }
+
+        .section-title {
+            max-width: 750px;
+            margin-bottom: 55px;
+        }
+
+        .section-title small {
+            color: #63ff8a;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 11px;
+        }
+
+        .section-title h2 {
+            font-size: clamp(35px, 5vw, 60px);
+            margin: 10px 0 15px;
+        }
+
+        .section-title p {
+            color: #888;
+            font-size: 17px;
+        }
+
+        /* =========================
+           FEATURES
+        ========================= */
+
+        .features {
+            background: #080808;
+        }
+
+        .feature-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 18px;
+        }
+
+        .feature {
+            background: #0d0d0d;
+
+            border: 1px solid #1c1c1c;
+
+            padding: 30px;
+
+            border-radius: 12px;
+
+            transition: 0.25s;
+        }
+
+        .feature:hover {
+            border-color: #28683b;
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .feature h3 {
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* =========================
+           ARCHITECTURE
+        ========================= */
+
+        .architecture {
+            text-align: center;
+        }
+
+        .architecture-diagram {
+            max-width: 1000px;
+
+            margin: auto;
+
+            padding: 45px 25px;
+
+            background: #080808;
+
+            border: 1px solid #1d1d1d;
+
+            border-radius: 15px;
+        }
+
+        .pipeline {
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            gap: 12px;
+
+            flex-wrap: wrap;
+        }
+
+        .node {
+            min-width: 140px;
+
+            padding: 18px;
+
+            border: 1px solid #28683b;
+
+            border-radius: 9px;
+
+            background: #0d150f;
+
+            color: #63ff8a;
+
+            font-size: 14px;
+
+            font-weight: 700;
+        }
+
+        .arrow {
+            color: #555;
+            font-size: 24px;
+        }
+
+        .architecture-description {
+            max-width: 650px;
+
+            margin: 35px auto 0;
+
+            color: #777;
+        }
+
+        /* =========================
+           CODE SECTION
+        ========================= */
+
+        .code-section {
+            background: #080808;
+        }
+
+        .code-window {
+            max-width: 900px;
+
+            margin: auto;
+
+            background: #030303;
+
+            border: 1px solid #202020;
+
+            border-radius: 12px;
+
+            overflow: hidden;
+
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .code-header {
+            padding: 12px 18px;
+
+            border-bottom: 1px solid #202020;
+
+            color: #555;
+
+            font-size: 12px;
+        }
+
+        pre {
+            padding: 30px;
+
+            overflow-x: auto;
+
+            color: #bbb;
+
+            font-family: Consolas, monospace;
+
+            font-size: 14px;
+        }
+
+        .green {
+            color: #63ff8a;
+        }
+
+        .gray {
+            color: #666;
+        }
+
+        /* =========================
+           REQUIREMENTS
+        ========================= */
+
+        .requirements {
+            display: grid;
+
+            grid-template-columns: repeat(4, 1fr);
+
+            gap: 15px;
+        }
+
+        .requirement {
+            background: #0c0c0c;
+
+            border: 1px solid #1d1d1d;
+
+            padding: 25px;
+
+            border-radius: 10px;
+
+            text-align: center;
+        }
+
+        .requirement strong {
+            display: block;
+
+            font-size: 22px;
+
+            color: #63ff8a;
+
+            margin-bottom: 5px;
+        }
+
+        .requirement span {
+            color: #777;
+
+            font-size: 13px;
+        }
+
+        /* =========================
+           ROADMAP
+        ========================= */
+
+        .roadmap {
+            max-width: 900px;
+
+            margin: auto;
+        }
+
+        .roadmap-item {
+            position: relative;
+
+            padding: 0 0 45px 45px;
+
+            border-left: 1px solid #252525;
+        }
+
+        .roadmap-item:last-child {
+            border-left: none;
+        }
+
+        .roadmap-item::before {
+            content: "";
+
+            position: absolute;
+
+            left: -5px;
+            top: 3px;
+
+            width: 9px;
+            height: 9px;
+
+            background: #63ff8a;
+
+            border-radius: 50%;
+
+            box-shadow: 0 0 15px rgba(99, 255, 138, 0.5);
+        }
+
+        .roadmap-item h3 {
+            margin-bottom: 8px;
+        }
+
+        .roadmap-item p {
+            color: #777;
+        }
+
+        .status {
+            display: inline-block;
+
+            margin-bottom: 8px;
+
+            color: #63ff8a;
+
+            font-size: 11px;
+
+            text-transform: uppercase;
+
+            letter-spacing: 2px;
+        }
+
+        /* =========================
+           DOWNLOAD
+        ========================= */
+
+        .download {
+            text-align: center;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(99, 255, 138, 0.08),
+                    transparent 55%
+                );
+
+            border-top: 1px solid #151515;
+            border-bottom: 1px solid #151515;
+        }
+
+        .download h2 {
+            font-size: clamp(40px, 6vw, 70px);
+
+            margin-bottom: 15px;
+        }
+
+        .download p {
+            color: #777;
+
+            max-width: 600px;
+
+            margin: auto auto 30px;
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        footer {
+            padding: 35px 7%;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            color: #555;
+
+            font-size: 13px;
+        }
+
+        footer a {
+            color: #777;
+        }
+
+        footer a:hover {
+            color: #63ff8a;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 850px) {
+
+            .nav-links {
+                display: none;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .requirements {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hero h1 {
+                letter-spacing: -4px;
+            }
+        }
+
+        @media (max-width: 550px) {
+
+            section {
+                padding: 80px 5%;
+            }
+
+            .requirements {
+                grid-template-columns: 1fr;
+            }
+
+            .node {
+                width: 100%;
+            }
+
+            .arrow {
+                transform: rotate(90deg);
+            }
+
+            footer {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================
+         NAVIGATION
+    ========================== -->
+
+    <nav>
+
+        <a href="#" class="logo">
+            Tiny<span>Video</span>
+        </a>
+
+        <ul class="nav-links">
+
+            <li>
+                <a href="#features">Features</a>
+            </li>
+
+            <li>
+                <a href="#architecture">Architecture</a>
+            </li>
+
+            <li>
+                <a href="#requirements">Requirements</a>
+            </li>
+
+            <li>
+                <a href="#roadmap">Roadmap</a>
+            </li>
+
+        </ul>
+
+        <a
+            class="nav-download"
+            href="https://github.com/CyberPlugger/TinyVideo/releases"
+            target="_blank"
+        >
+            Download
+        </a>
+
+    </nav>
+
+
+    <!-- =========================
+         HERO
+    ========================== -->
+
+    <header class="hero">
+
+        <div class="hero-content">
+
+            <div class="version">
+                TinyVideo v1.4 · Pre-release
+            </div>
+
+            <h1>
+                Tiny<span>Video</span>
+            </h1>
+
+            <p>
+                A local-first AI video generation system
+                built from the ground up in Python.
+                Experiment, train, generate, and control
+                the entire pipeline locally.
+            </p>
+
+            <div class="buttons">
+
+                <a
+                    class="button primary"
+                    href="https://github.com/CyberPlugger/TinyVideo/releases"
+                    target="_blank"
+                >
+                    Download TinyVideo
+                </a>
+
+                <a
+                    class="button secondary"
+                    href="https://github.com/CyberPlugger/TinyVideo"
+                    target="_blank"
+                >
+                    View on GitHub
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         FEATURES
+    ========================== -->
+
+    <section class="features" id="features">
+
+        <div class="section-title">
+
+            <small>Capabilities</small>
+
+            <h2>
+                Small system.
+                Big ambitions.
+            </h2>
+
+            <p>
+                TinyVideo is designed as a modular AI video
+                generation project where every part of the
+                pipeline can be inspected and improved.
+            </p>
+
+        </div>
+
+
+        <div class="feature-grid">
+
+            <div class="feature">
+
+                <div class="feature-icon">🎬</div>
+
+                <h3>Text-to-Video</h3>
+
+                <p>
+                    Generate short videos from natural-language
+                    prompts using a diffusion-based video model.
+                </p>
+
+            </div>
+
+
+            <div class="feature">
+
+                <div class="feature-icon">🖼️</div>
+
+                <h3>Image Conditioning</h3>
+
+                <p>
+                    Use an input image together with a prompt
+                    to influence the generated video.
+                </p>
+
+            </div>
+
+
+            <div class="feature">
+
+                <div class="feature-icon">🧠</div>
+
+                <h3>Latent Diffusion</h3>
+
+                <p>
+                    Perform the diffusion process in a compact
+                    latent video representation.
+                </p>
+
+            </div>
+
+
+            <div class="feature">
+
+                <div class="feature-icon">📐</div>
+
+                <h3>Resolution Conditioning</h3>
+
+                <p>
+                    Resolution can be treated as a controllable
+                    property of the generation pipeline.
+                </p>
+
+            </div>
+
+
+            <div class="feature">
+
+                <div class="feature-icon">🏋️</div>
+
+                <h3>Local Training</h3>
+
+                <p>
+                    Create datasets and train the TinyVideo
+                    model locally.
+                </p>
+
+            </div>
+
+
+            <div class="feature">
+
+                <div class="feature-icon">🖥️</div>
+
+                <h3>Local GUI</h3>
+
+                <p>
+                    Access generation, image generation,
+                    dataset tools, and training through a
+                    Tkinter interface.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         ARCHITECTURE
+    ========================== -->
+
+    <section class="architecture" id="architecture">
+
+        <div class="section-title">
+
+            <small>Architecture</small>
+
+            <h2>
+                Built as a pipeline.
+            </h2>
+
+            <p>
+                TinyVideo separates prompting, conditioning,
+                diffusion, decoding, and video output.
+            </p>
+
+        </div>
+
+
+        <div class="architecture-diagram">
+
+            <div class="pipeline">
+
+                <div class="node">
+                    User Prompt
+                </div>
+
+                <div class="arrow">
+                    →
+                </div>
+
+                <div class="node">
+                    Text Encoder
+                </div>
+
+                <div class="arrow">
+                    →
+                </div>
+
+                <div class="node">
+                    Conditioning
+                </div>
+
+                <div class="arrow">
+                    →
+                </div>
+
+                <div class="node">
+                    Diffusion
+                </div>
+
+                <div class="arrow">
+                    →
+                </div>
+
+                <div class="node">
+                    Decoder
+                </div>
+
+                <div class="arrow">
+                    →
+                </div>
+
+                <div class="node">
+                    Video
+                </div>
+
+            </div>
+
+
+            <p class="architecture-description">
+                Image-conditioned generation adds an image
+                encoder alongside the text-conditioning path,
+                allowing visual information to influence the
+                generated video.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         CODE
+    ========================== -->
+
+    <section class="code-section">
+
+        <div class="section-title">
+
+            <small>Local First</small>
+
+            <h2>
+                Your machine.
+                Your model.
+            </h2>
+
+            <p>
+                TinyVideo is designed around local experimentation
+                rather than requiring a remote video-generation API.
+            </p>
+
+        </div>
+
+
+        <div class="code-window">
+
+            <div class="code-header">
+                TinyVideo / terminal
+            </div>
+
+            <pre><span class="gray">$</span> <span class="green">python ACTIVATE_ME.py</span>
+
+<span class="gray">TinyVideo</span>
+<span class="gray">Starting local environment...</span>
+
+<span class="green">Ready.</span>
+
+<span class="gray">Prompt → Model → Diffusion → Video</span></pre>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         REQUIREMENTS
+    ========================== -->
+
+    <section id="requirements">
+
+        <div class="section-title">
+
+            <small>System Requirements</small>
+
+            <h2>
+                What you need.
+            </h2>
+
+            <p>
+                TinyVideo v1.4 is currently distributed as a
+                pre-release. Check the release page for the
+                latest requirements and downloads.
+            </p>
+
+        </div>
+
+
+        <div class="requirements">
+
+            <div class="requirement">
+
+                <strong>64-bit</strong>
+
+                <span>
+                    System
+                </span>
+
+            </div>
+
+
+            <div class="requirement">
+
+                <strong>Python</strong>
+
+                <span>
+                    3.11+
+                </span>
+
+            </div>
+
+
+            <div class="requirement">
+
+                <strong>12 GB</strong>
+
+                <span>
+                    RAM minimum
+                </span>
+
+            </div>
+
+
+            <div class="requirement">
+
+                <strong>128 MB</strong>
+
+                <span>
+                    Graphics minimum
+                </span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         ROADMAP
+    ========================== -->
+
+    <section id="roadmap" class="features">
+
+        <div class="section-title">
+
+            <small>Roadmap</small>
+
+            <h2>
+                This is only the beginning.
+            </h2>
+
+            <p>
+                TinyVideo is being developed continuously.
+            </p>
+
+        </div>
+
+
+        <div class="roadmap">
+
+            <div class="roadmap-item">
+
+                <span class="status">
+                    Current
+                </span>
+
+                <h3>
+                    V1.4
+                </h3>
+
+                <p>
+                    Latent diffusion, text conditioning,
+                    image conditioning, dataset conversion,
+                    local training, and the first local GUI.
+                </p>
+
+            </div>
+
+
+            <div class="roadmap-item">
+
+                <span class="status">
+                    Planned
+                </span>
+
+                <h3>
+                    V1.4 Pro
+                </h3>
+
+                <p>
+                    Increase the model's working dimensions
+                    while maintaining a square video format,
+                    with the goal of improving visual quality
+                    and generation capability.
+                </p>
+
+            </div>
+
+
+            <div class="roadmap-item">
+
+                <span class="status">
+                    Planned
+                </span>
+
+                <h3>
+                    TinyAudio
+                </h3>
+
+                <p>
+                    A separate local audio-generation system
+                    designed to eventually generate audio from
+                    the same user prompt.
+                </p>
+
+            </div>
+
+
+            <div class="roadmap-item">
+
+                <span class="status">
+                    Long Term
+                </span>
+
+                <h3>
+                    Video + Audio
+                </h3>
+
+                <p>
+                    TinyVideo and TinyAudio independently generate
+                    their outputs before being combined into a
+                    final video.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         DOWNLOAD
+    ========================== -->
+
+    <section class="download">
+
+        <h2>
+            Ready to try TinyVideo?
+        </h2>
+
+        <p>
+            Download the latest release from GitHub and
+            start experimenting with local AI video generation.
+        </p>
+
+        <a
+            class="button primary"
+            href="https://github.com/CyberPlugger/TinyVideo/releases"
+            target="_blank"
+        >
+            Download from GitHub
+        </a>
+
+    </section>
+
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+
+    <footer>
+
+        <div>
+            © 2026 CyberPlugger · TinyVideo
+        </div>
+
+        <div>
+
+            <a
+                href="https://github.com/CyberPlugger/TinyVideo"
+                target="_blank"
+            >
+                GitHub
+            </a>
+
+            &nbsp;·&nbsp;
+
+            <a
+                href="https://github.com/CyberPlugger/TinyVideo/releases"
+                target="_blank"
+            >
+                Releases
+            </a>
+
+        </div>
+
+    </footer>
+
+</body>
+</html>
